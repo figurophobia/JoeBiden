@@ -3,6 +3,8 @@
 #define COUNTER_H
 
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 // void start_counter();

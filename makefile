@@ -2,7 +2,7 @@
 all: v1 v2 v3 v4
 
 v1: v1.c
-	$(CC) $(CFLAGS) -lm -Wall -o v1 v1.c
+	$(CC) $(CFLAGS) -Wall -o v1 v1.c -lm
 	
 v2: v2.c
 	$(CC) $(CFLAGS) -lm -Wall -o v2 v2.c
