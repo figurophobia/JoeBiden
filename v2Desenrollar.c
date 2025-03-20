@@ -5,10 +5,6 @@
 
 void initializeSystem(float*** a, float** b, float** x, int N);
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
-int min(int a, int b){
-    return a < b ? a : b;
-}
-#define BLOQUE_SIZE 2
 
 int main(int argc, char** argv){
     if (argc < 2) {
@@ -76,61 +72,41 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
         return;
     }
     float norm2 = 0.0;
-
-    //Abrimos un archivo para guardar resultados:
-    FILE *f = fopen("resultados.txt", "w");
-    if (f == NULL)
-    {
+    FILE *f = fopen("outputv1.txt", "w");
+    if (f==NULL){
         printf("Error opening file!\n");
         exit(1);
     }
 
     start_counter();
-
-    for (int iter = 0; iter < max_iter; iter++) {
+    for (int iter = 0; iter < max_iter; iter++){
         norm2 = 0.0;
-
-        // Recorrer la matriz por bloques
-        for (int bi = 0; bi < N; bi += BLOQUE_SIZE) {
-            int bimin = (bi + BLOQUE_SIZE < N) ? bi + BLOQUE_SIZE : N;
-
-            for (int bj = 0; bj < N; bj += BLOQUE_SIZE) {
-                int bjmin = (bj + BLOQUE_SIZE < N) ? bj + BLOQUE_SIZE : N;
-
-                // Calcular x_new para los elementos del bloque
-                for (int i = bi; i < bimin; i++) {
-                    float sigma = 0.0;
-
-                    for (int j = bj; j < bjmin; j++) {
-                        if (i != j) {
-                            sigma += a[i][j] * x[j];
-                        }
-                    }
-
-                    x_new[i] = (b[i] - sigma) / a[i][i];
+        for(int i = 0; i < N; i++){
+            float sigma = 0.0;
+            for(int j = 0; j < N; j++){
+                if(i != j){
+                    sigma += a[i][j] * x[j];
                 }
             }
-        }
-
-        // Actualizar x y calcular la norma fuera de los bucles de bloques
-        for (int i = 0; i < N; i++) {
+            x_new[i] = (b[i] - sigma) / a[i][i];
             norm2 += pow(x_new[i] - x[i], 2);
-            x[i] = x_new[i];
-            
         }
-
-        // Comprobar convergencia
-        if (sqrt(norm2) < tol) {
+        
+        for(int i = 0; i < N; i++){
+            x[i] = x_new[i];
+        }
+        
+        if (sqrt(norm2) < tol){
             double cycles = get_counter();
             printf("Iteraciones: %d\n", iter);
             printf("Norma: %.15e\n", norm2);
             printf("Ciclos: %.0f\n", cycles);
-            for (int i = 0; i < N; i++) {
+            for(int i = 0; i < N; i++){
                 fprintf(f, "x[%d] = %.15e\n", i, x[i]);
             }
             break;
         }
     }
-
+    
     free(x_new);
 }
