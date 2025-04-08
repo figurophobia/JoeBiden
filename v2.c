@@ -8,7 +8,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
 int min(int a, int b){
     return a < b ? a : b;
 }
-#define BLOQUE_SIZE 2
+#define BLOQUE_SIZE 16
 
 int main(int argc, char** argv){
     if (argc < 2) {
@@ -107,7 +107,8 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
                         }
                     }
 
-                    x_new[i] = (b[i] - sigma) / a[i][i];
+                    x_new[i] = (b[i] - sigma) / a[i][i]; //Revisar esta linea, sigma quiza está mal calculado
+                    
                 }
             }
         }

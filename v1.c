@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 void initializeSystem(float*** a, float** b, float** x, int N);
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
@@ -92,7 +93,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
             norm2 += pow(x_new[i] - x[i], 2);
         }
         
-        for(int i = 0; i < N; i++){
+        for (int i = 0; i < N; i++){ //Se podria usar memcpy aqui
             x[i] = x_new[i];
         }
         
@@ -101,9 +102,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
             printf("Iteraciones: %d\n", iter);
             printf("Norma: %.15e\n", norm2);
             printf("Ciclos: %.0f\n", cycles);
-            for(int i = 0; i < N; i++){
-                fprintf(f, "x[%d] = %.15e\n", i, x[i]);
-            }
+            printf("Tiempo: %f\n", cycles / 2.5e9); // Asumiendo un reloj de 2.5 GHz
             break;
         }
     }
