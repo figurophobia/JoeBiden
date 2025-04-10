@@ -6,6 +6,9 @@ v1: v1.c
 	
 v2: v2.c
 	$(CC) $(CFLAGS)  -Wall -o v2 v2.c -lm
+
+v2i: v2instrucciones.c
+	$(CC) $(CFLAGS)  -Wall -o v2i v2instrucciones.c -lm
 	
 v3: v3.c
 	$(CC) $(CFLAGS) -mavx2 -Wall  -o v3 v3.c -lm

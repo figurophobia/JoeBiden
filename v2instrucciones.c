@@ -10,6 +10,7 @@ void JacobiMenosInstrucciones(float** a, float* b, float* x, int N, float tol, i
 void JacobiDividido(float** a, float* b, float* x, int N, float tol, int max_iter);
 void JacobiDesenrollado(float** a, float* b, float* x, int N, float tol, int max_iter);
 void JacobiBloques(float** a, float* b, float* x, int N, float tol, int max_iter);
+void save_csv(char *name, int N, int nhilos, int nciclos);
 
 #define BLOCK_SIZE 32
 
@@ -290,6 +291,7 @@ void JacobiDesenrollado(float** a, float* b, float* x, int N, float tol, int max
 Lo mismo que aplicamos la division de bucles y bloques
 */
 void JacobiBloques(float** a, float* b, float* x, int N, float tol, int max_iter){
+    double cycles;
     float* x_new = (float*)malloc(N * sizeof(float));
     if (!x_new) {
         printf("Error en la asignación de memoria\n");
@@ -347,7 +349,7 @@ void JacobiBloques(float** a, float* b, float* x, int N, float tol, int max_iter
         x_old = tmp;
         
         if (sqrt(norm2) < tol){
-            double cycles = get_counter();
+            cycles = get_counter();
             printf("Iteraciones: %d\n", iter);
             printf("Norma: %.15e\n", norm2);
             printf("Ciclos: %.0f\n", cycles);
@@ -355,10 +357,21 @@ void JacobiBloques(float** a, float* b, float* x, int N, float tol, int max_iter
             break;
         }
     }
+
+    save_csv("v2-blocks.csv", N, 0, cycles); // Guardar resultados en CSV
     
     free(x_new);
     free(inv_a);
 
 }
 
-
+void save_csv(char *name, int N, int nhilos, int nciclos) {
+    FILE *f = fopen(name, "a");
+    if (f == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+    printf("printing to file\n");
+    fprintf(f, "%d,%d,%d\n", N, nhilos, nciclos);
+    fclose(f);
+}
