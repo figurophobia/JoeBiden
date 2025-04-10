@@ -80,6 +80,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
     }
 
     start_counter();
+    
     for (int iter = 0; iter < max_iter; iter++){
         norm2 = 0.0;
         for(int i = 0; i < N; i++){
