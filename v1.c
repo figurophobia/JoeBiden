@@ -6,6 +6,16 @@
 
 void initializeSystem(float*** a, float** b, float** x, int N);
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
+void save_csv(char *name, int N, int nhilos, int nciclos) {
+    FILE *f = fopen(name, "a");
+    if (f == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+    printf("printing to file\n");
+    fprintf(f, "%d,%d,%d\n", N, nhilos, nciclos);
+    fclose(f);
+}
 
 int main(int argc, char** argv){
     if (argc < 2) {
@@ -67,6 +77,7 @@ void initializeSystem(float*** a, float** b, float** x, int N) {
 }
 
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
+    double cycles;
     float* x_new = (float*)malloc(N * sizeof(float));
     if (!x_new) {
         fprintf(stderr, "Error en la asignación de memoria\n");
@@ -80,7 +91,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
     }
 
     start_counter();
-    
+
     for (int iter = 0; iter < max_iter; iter++){
         norm2 = 0.0;
         for(int i = 0; i < N; i++){
@@ -99,7 +110,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
         }
         
         if (sqrt(norm2) < tol){
-            double cycles = get_counter();
+            cycles = get_counter();
             printf("Iteraciones: %d\n", iter);
             printf("Norma: %.15e\n", norm2);
             printf("Ciclos: %.0f\n", cycles);
@@ -107,6 +118,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
             break;
         }
     }
+    save_csv("v1.csv", N, 0, cycles); // Guardar resultados en CSV
     
     free(x_new);
 }

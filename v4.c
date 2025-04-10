@@ -10,6 +10,16 @@
 void initializeSystem(float*** a, float** b, float** x, int N);
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
 void _Jacobi_atomic(float** a, float* b, float* x, int N, float tol, int max_iter);
+void save_csv(char *name, int N, int nhilos, int nciclos) {
+    FILE *f = fopen(name, "a");
+    if (f == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+    printf("printing to file\n");
+    fprintf(f, "%d,%d,%d\n", N, nhilos, nciclos);
+    fclose(f);
+}
 
 int main(int argc, char** argv){
     if (argc < 2) {
@@ -71,6 +81,7 @@ void initializeSystem(float*** a, float** b, float** x, int N) {
 }
 
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
+    double cycles;
     float* x_new = (float*)malloc(N * sizeof(float));
     if (!x_new) {
         fprintf(stderr, "Error en la asignación de memoria\n");
@@ -116,7 +127,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
                 # pragma omp single
                 {
                 double end = omp_get_wtime();
-                double cycles = get_counter();
+                cycles = get_counter();
                 printf("Iteraciones: %d\n", iter);
                 printf("Norma: %.15e\n", norm2);
                 printf("Ciclos: %.10e\n", cycles);
@@ -128,7 +139,7 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
             # pragma omp barrier
         }
     
-    
+    save_csv("v4.csv", N, K, cycles); // Guardar resultados en CSV
     
     free(x_new);
 }
