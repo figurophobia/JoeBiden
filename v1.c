@@ -7,7 +7,7 @@
 void initializeSystem(float*** a, float** b, float** x, int N);
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
 void save_csv(char *name, int N, int nhilos, int nciclos) {
-    FILE *f = fopen(name, "a");
+    FILE *f = fopen(name, "a"); //a para agregar al final del archivo
     if (f == NULL) {
         printf("Error opening file!\n");
         exit(1);
