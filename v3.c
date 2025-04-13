@@ -5,8 +5,18 @@
 #include <string.h>
 #include <immintrin.h>
 #include <stdint.h>
+#if __STDC_VERSION__ >= 201112L
+    #include <stdalign.h>
+#endif
 
-#define BYTES (8 * sizeof(float))
+#define BYTES (8 * sizeof(float))  // 32 bytes
+
+static inline __m256 load256(const float *p) { // funcion mas segura que comprueba si la mem esta alineada
+    if (((uintptr_t)p % BYTES) == 0)
+        return _mm256_load_ps(p);
+    else
+        return _mm256_loadu_ps(p);
+}
 
 void initializeSystem(float*** a, float** b, float** x, int N);
 void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter);
@@ -20,7 +30,7 @@ void save_csv(char *name, int N, int nhilos, int nciclos) {
     fclose(f);
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "Uso: %s <tamaño de matriz> [número de hilos - ignorado]\n", argv[0]);
         return 1;
@@ -35,37 +45,36 @@ int main(int argc, char** argv){
     float tol = 1e-8;
     int max_iter = 20000;
 
-    //float** a = (float**)malloc(N * sizeof(float*));
-    float** a = NULL; 
-    if(posix_memalign((void**)&a, BYTES, N * sizeof(float*)) != 0) {
-        fprintf(stderr, "Error en la asignación de memoria\n");
+    float** a = NULL;
+    if (posix_memalign((void**)&a, BYTES, N * sizeof(float*)) != 0) {
+        fprintf(stderr, "Error en la asignación de memoria para a\n");
         return 1;
     }
-
-
     for (int i = 0; i < N; i++) {
-        //a[i] = (float*)malloc(N * sizeof(float));
-        if(posix_memalign((void**)&a[i], BYTES, N * sizeof(float)) != 0) {
-            fprintf(stderr, "Error en la asignación de memoria\n");
+        if (posix_memalign((void**)&a[i], BYTES, N * sizeof(float)) != 0) {
+            fprintf(stderr, "Error en la asignación de memoria para a[%d]\n", i);
             return 1;
         }
     }
-    
+
     float* b = (float*)malloc(N * sizeof(float));
-    //float* x = (float*)malloc(N * sizeof(float));
-    float* x = NULL; 
-    if(posix_memalign((void**)&x, BYTES, N * sizeof(float)) != 0) {
-        fprintf(stderr, "Error en la asignación de memoria\n");
+    if (b == NULL) {
+        fprintf(stderr, "Error en la asignación de memoria para b\n");
         return 1;
     }
-    
+
+    float* x = NULL;
+    if (posix_memalign((void**)&x, BYTES, N * sizeof(float)) != 0) {
+        fprintf(stderr, "Error en la asignación de memoria para x\n");
+        return 1;
+    }
+
     if (!a || !b || !x) {
         fprintf(stderr, "Error en la asignación de memoria\n");
         return 1;
     }
 
     initializeSystem(&a, &b, &x, N);
-
     Jacobi(a, b, x, N, tol, max_iter);
 
     for (int i = 0; i < N; i++) {
@@ -95,75 +104,73 @@ void initializeSystem(float*** a, float** b, float** x, int N) {
     }
 }
 
-void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
+void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter) {
     double cycles = 0.0;
-    //float* x_new = (float*)malloc(N * sizeof(float));
+
     float* x_new = (float*)malloc(N * sizeof(float));
+    if (x_new == NULL) {
+        fprintf(stderr, "Error en la asignación de memoria para x_new\n");
+        return;
+    }
     
     double norm2 = 0.0;
+    int iter = 0;
 
     start_counter();
 
-    int iter = 0;
-
-    for (; iter < max_iter; iter++){
+    for (; iter < max_iter; iter++) {
         norm2 = 0.0;
-        for(int i = 0; i < N; i++){
-            float sigma = 0.0;
+        for (int i = 0; i < N; i++) {
+            float sigma = 0.0f;
             int j = 0;
-            // si i esta en el bloque de 8 sale del bucle
+
             for (; j <= i - 8; j += 8) {
-                // 8 floats de a[i][j] y x[j] (se requiere que estén alineados a 32 bytes)
+
                 __m256 va = _mm256_load_ps(&a[i][j]);
                 __m256 vx = _mm256_load_ps(&x[j]);
-                __m256 vmul = _mm256_mul_ps(va, vx); // multiplicacion
-
-                float temp[8];
+                __m256 vmul = _mm256_mul_ps(va, vx);
+                // problema de alineación
+                __attribute__((aligned(32))) float temp[8];
                 _mm256_store_ps(temp, vmul);
-                sigma += temp[0] + temp[1] + temp[2] + temp[3] +
-                         temp[4] + temp[5] + temp[6] + temp[7];
+                sigma += temp[0] + temp[1] + temp[2] + temp[3]
+                       + temp[4] + temp[5] + temp[6] + temp[7];
             }
 
-            for (; j < i; j++){
+            for (; j < i; j++) {
                 sigma += a[i][j] * x[j];
             }
 
-            j = i + 1; // el bucle anterior sale cuando j == i
-
-            // procesar escalarmente hasta un indice alineado
+            // bucle sale cuando j==i
+            j = i + 1;
+            // procesa escalarmente hasta que la dirección de a[i][j] esté alineada
             while (j < N && (((uintptr_t)&a[i][j]) % BYTES) != 0) {
                 sigma += a[i][j] * x[j];
                 j++;
             }
 
             for (; j <= N - 8; j += 8) {
-                __m256 va = _mm256_load_ps(&a[i][j]);
-                __m256 vx = _mm256_load_ps(&x[j]);
+                __m256 va = load256(&a[i][j]);
+                __m256 vx = load256(&x[j]);
                 __m256 vmul = _mm256_mul_ps(va, vx);
-                float temp[8];
+                __attribute__((aligned(32))) float temp[8];
                 _mm256_store_ps(temp, vmul);
-                sigma += temp[0] + temp[1] + temp[2] + temp[3] +
-                         temp[4] + temp[5] + temp[6] + temp[7];
+                sigma += temp[0] + temp[1] + temp[2] + temp[3]
+                       + temp[4] + temp[5] + temp[6] + temp[7];
             }
 
-            for (; j < N; j++){ // valores restantes
+            for (; j < N; j++) {
                 sigma += a[i][j] * x[j];
             }
 
             x_new[i] = (b[i] - sigma) / a[i][i];
-            
-            double diff = x_new[i] - x[i];
-            norm2 += pow(diff, 2);
+            float diff = x_new[i] - x[i];
+            norm2 += diff * diff;
         }
         
         printf("Norma: %.15e\n", norm2);
-
-        /*for(int i = 0; i < N; i++) {
-            x[i] = x_new[i];
-        }*/
-       memcpy(x, x_new, N * sizeof(float)); // Copia de x_new a x
+        memcpy(x, x_new, N * sizeof(float));
         
-        if (norm2 < tol * tol){
+        if (norm2 < tol * tol) {
             break;
         }
     }
@@ -172,9 +179,8 @@ void Jacobi(float** a, float* b, float* x, int N, float tol, int max_iter){
     printf("Iteraciones: %d\n", iter);
     printf("Norma: %.15e\n", norm2);
     printf("Ciclos: %.0f\n", cycles);
-    printf("Tiempo: %f\n", cycles / 2.5e9); // Asumiendo un reloj de 2.5 GHz
+    printf("Tiempo: %f segundos\n", cycles / 2.5e9);
 
-    save_csv("v1.csv", N, 0, cycles); // Guardar resultados en CSV
-    
+    save_csv("v3.csv", N, 0, cycles);
     free(x_new);
 }
